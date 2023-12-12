@@ -1,0 +1,73 @@
+---
+title: "Geospatial"
+output: html_document
+date: "2023-12-08"
+---
+```{r}
+library(tidyverse)
+library(sf)
+```
+
+```{r}
+burglaries_2023 <- read_csv('./data/burglaries_2023.csv')
+census = read.csv('./data/census.csv')
+```
+```{r}
+colnames(burglaries_2023)
+```
+```{r}
+burglaries_cleaned <- burglaries_2023 |> filter(!is.na(latitude) & !is.na(longitude))
+burglaries_sf <- st_as_sf(burglaries_cleaned, coords = c("longitude", "latitude"), crs = 4326)
+```
+
+```{r}
+DC <- st_read("./data/DC/DC.shp")
+```
+
+```{r}
+plot(DC)
+```
+```{r}
+burglaries_cleaned |> head()
+```
+
+
+```{r}
+colnames(burglaries_sf)
+```
+```{r}
+colnames(DC)
+```
+```{r}
+st_crs(burglaries_sf)
+print("_______________")
+st_crs(DC)
+```
+
+
+```{r}
+DC <- st_transform(DC, st_crs(burglaries_sf))
+joined_data <- st_join(burglaries_sf, DC, join = st_within)
+```
+
+
+```{r}
+joined_data <- joined_data|> select(-c(STATEFP, COUNTYFP, GEOID,NAME,NAMELSAD, MTFCC, FUNCSTAT, ALAND, AWATER, INTPTLAT, INTPTLON  ))
+```
+
+```{r}
+joined_data <- joined_data |> rename(tract=TRACTCE)
+```
+
+```{r}
+census$tract <- as.character(census$tract)
+joined_data$tract <- str_remove(joined_data$tract, "^0+")
+burglaries_df <- left_join(joined_data, census, by="tract")
+```
+
+```{r}
+census |> pull(tract) |> n_distinct()
+joined_data |> pull(tract) |> n_distinct()
+burglaries_df |> pull(tract) |> n_distinct()
+```
+
