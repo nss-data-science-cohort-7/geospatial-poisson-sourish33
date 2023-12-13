@@ -70,4 +70,49 @@ census |> pull(tract) |> n_distinct()
 joined_data |> pull(tract) |> n_distinct()
 burglaries_df |> pull(tract) |> n_distinct()
 ```
+```{r}
+burglaries_df <- burglaries_df |> 
+  filter(!is.na(tract))
+burglaries_df <- burglaries_df |> arrange(tract)
+```
+
+```{r}
+tracts_unique_incidents <- burglaries_df |> 
+  group_by(tract) |>
+  summarise(Unique_incidents = n_distinct(incident_number)) |>
+  ungroup()
+```
+
+```{r}
+census_df <- left_join(census, tracts_unique_incidents, by='tract')|>
+  filter(!is.na(Unique_incidents) & population != 0)
+```
+
+```{r}
+census_df <- census_df |>  mutate(Unique_incidents_1000 = 1000*Unique_incidents/population)
+```
+
+```{r}
+census_df |> arrange(desc(Unique_incidents)) |> head()
+census_df |> arrange(desc(Unique_incidents_1000)) |> head()
+```
+
+```{r}
+census_df |> arrange(Unique_incidents) |> head()
+census_df |> arrange(Unique_incidents_1000) |> head()
+```
+```{r}
+ggplot(census_df, aes(x = median_income, y = Unique_incidents)) +
+  geom_point() +  # Add points for the scatterplot
+  labs(x = "Median Income", y = "Incidents") +  # Label the axes
+  ggtitle("Scatterplot of Incidents vs Median Income")  # Set the title
+```
+
+
+```{r}
+census_df |> mutate (income_bins = cut(median_income, breaks=20)) |>
+  group_by(income_bins) |>
+  summarize(mean_incidents = mean(Unique_incidents), var_incidents = var(Unique_incidents) )
+```
+
 
