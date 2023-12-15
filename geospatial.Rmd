@@ -94,7 +94,14 @@ census_df <- census_df |>  mutate(Unique_incidents_1000 = 1000*Unique_incidents/
 
 ```{r}
 census_df |> arrange(desc(Unique_incidents)) |> head()
-census_df |> arrange(desc(Unique_incidents_1000)) |> head()
+top_five_worst_hit <- census_df |> arrange(desc(Unique_incidents_1000)) |> head()
+top_five_least_hit <- census_df |> arrange(Unique_incidents_1000) |> head()
+
+top_five_worst_hit_sf <- st_sf(top_five_worst_hit, geometry = top_five_least_hit$geometry)
+
+ggplot() +
+  geom_sf(data = top_five_worst_hit_sf) +
+  labs(title = "Top 5 worst hit")
 ```
 
 ```{r}
@@ -112,7 +119,97 @@ ggplot(census_df, aes(x = median_income, y = Unique_incidents)) +
 ```{r}
 census_df |> mutate (income_bins = cut(median_income, breaks=20)) |>
   group_by(income_bins) |>
-  summarize(mean_incidents = mean(Unique_incidents), var_incidents = var(Unique_incidents) )
+  summarize(mean_incidents = mean(Unique_incidents_1000), var_incidents = var(Unique_incidents_1000) ) |>
+
+ggplot( aes(x = mean_incidents, y = var_incidents)) +
+  geom_point(color = "blue") +
+  labs(title = "Mean Incidents vs Mean Variance",
+       x = "Mean Incidents", y = "Mean Variance") +
+  theme_minimal()
 ```
 
+```{r}
+ggplot(census_df, aes(y = median_income)) +
+  geom_boxplot() +
+  labs(title = "Boxplot of Median Income", y = "Median Income")
+```
+
+```{r}
+ggplot(census_df, aes(x = population, y = median_income)) +
+  geom_point() +
+  geom_smooth(formula = y ~ x, method = "lm", se = FALSE) +  # Adding a linear regression line without confidence interval
+  labs(title = "Median Income vs Population", x = "Population", y = "Median Income")
+```
+
+```{r}
+correlation <- cor(census_df$median_income, census_df$population)
+print(correlation)
+```
+Least and most affected
+```{r}
+burglaries_sf.
+```
+
+```{r}
+burglaries_sf |> 
+  group_by(weapon_description)|>
+  summarize(weapon = n() ) |>
+  arrange(desc(weapon))
+```
+```{r}
+library(lubridate)
+
+burglaries_sf <- burglaries_sf %>%
+  mutate(
+    incident_time = as.POSIXct(incident_occurred),  # Convert to POSIXct format if not already
+    incident_hour = hour(incident_time),  # Extract the hour component
+    time_category = case_when(
+      incident_hour >= 5 & incident_hour < 12 ~ "Morning",
+      incident_hour >= 12 & incident_hour < 17 ~ "Afternoon",
+      incident_hour >= 17 & incident_hour < 23 ~ "Evening",
+      TRUE ~ "Night"
+    )
+  ) %>%
+  select(-incident_time, -incident_hour)
+```
+
+```{r}
+incident_counts <- burglaries_sf %>%
+  group_by(time_category) %>%
+  summarize(incident_count = n()) 
+
+ggplot(incident_counts, aes(x = time_category, y = incident_count)) +
+  geom_bar(stat = "identity", fill = "skyblue") +
+  labs(title = "Number of Incidents by Time of Day", x = "Time Category", y = "Incident Count") +
+  theme_minimal()
+```
+
+
+```{r}
+burglaries_sf <- burglaries_sf %>%
+  mutate(
+    incident_time = as.POSIXct(incident_occurred),  # Convert to POSIXct 
+    incident_day = wday(incident_time, label = TRUE, abbr = FALSE)  # Extract the day of the week
+  ) %>%
+  select(-incident_time) 
+```
+
+
+```{r}
+incident_day_counts <- burglaries_sf %>%
+  group_by(incident_day) %>%
+  summarize(incident_count = n())  # Count the number of incidents for each day of the week
+
+# Create a bar plot
+ggplot(incident_day_counts, aes(x = incident_day, y = incident_count)) +
+  geom_bar(stat = "identity", fill = "skyblue") +
+  labs(title = "Number of Incidents by Day of the Week", x = "Day of the Week", y = "Incident Count") +
+  theme_minimal() +
+  scale_x_discrete(labels = c("Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"))
+```
+
+```{r}
+model = glm(Unique_incidents ~ median_income, family = poisson, data = census_df)
+summary(model)
+```
 
